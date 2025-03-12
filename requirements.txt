@@ -6,3 +6,4 @@ keras-facenet
 matplotlib
 numpy
 scipy
+tensorflow
