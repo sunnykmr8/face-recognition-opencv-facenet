@@ -1,68 +1,82 @@
+import streamlit as st
+from PIL import Image
 import cv2
 from mtcnn import MTCNN
 from keras_facenet import FaceNet
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 
-# Initialize MTCNN detector
+# Initialize MTCNN and FaceNet models
 detector = MTCNN()
-
-# Initialize FaceNet model
 embedder = FaceNet()
 
-# Read the image
-image_path = 'IMG/1200px-Which_friend_are_you.png'  # Replace with your image path
+# Function to process image and perform face detection + recognition
+def process_image(image):
+    rgb_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)  # Convert PIL to OpenCV format
+    
+    # Detect faces using MTCNN
+    results = detector.detect_faces(rgb_image)
+    
+    if len(results) == 0:
+        st.write("No faces detected.")
+        return
+    
+    # Plot the image with rectangles around detected faces
+    plt.figure(figsize=(6, 6))
+    plt.imshow(cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB))
+    ax = plt.gca()
+    
+    embeddings = []
+    face_count = 0
+    
+    for result in results:
+        x, y, width, height = result['box']
+        face = rgb_image[y:y + height, x:x + width]
+        
+        # Ensure the face is not empty
+        if face.size == 0:
+            continue
+        
+        # Get face embedding using FaceNet
+        face_embedding = embedder.embeddings([face])[0]
+        embeddings.append(face_embedding)
+        
+        # Draw rectangle around the face
+        rect = plt.Rectangle((x, y), width, height, fill=False, color='red', linewidth=2)
+        ax.add_patch(rect)
 
-image = cv2.imread(image_path)
-rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        face_count += 1
 
-# Detect faces
-results = detector.detect_faces(rgb_image)
+    # Display face count
+    st.write(f"**Number of faces detected:** {face_count}")
+    
+    # Show the image with detected faces
+    plt.axis('off')
+    st.pyplot(plt)
 
-# Plot the image with detected faces
-plt.imshow(rgb_image)
-ax = plt.gca()
+    # Calculate pairwise distances between embeddings for recognition accuracy
+    if len(embeddings) > 1:
+        st.write("### Similarity Between Faces:")
+        threshold = 1.0
+        for i in range(len(embeddings)):
+            for j in range(i + 1, len(embeddings)):
+                distance = np.linalg.norm(embeddings[i] - embeddings[j])
+                if distance < threshold:
+                    st.write(f"✅ Faces **{i + 1}** and **{j + 1}** are likely the same person (distance: {distance:.4f})")
+                else:
+                    st.write(f"❌ Faces **{i + 1}** and **{j + 1}** are likely different people (distance: {distance:.4f})")
 
-# Initialize face count
-face_count = 0
+# Streamlit app title
+st.title("🧠 Face Detection and Recognition")
 
-# List to store embeddings
-embeddings = []
+# File uploader
+uploaded_file = st.file_uploader("📸 Upload an image...", type=["jpg", "jpeg", "png"])
 
-# Extract embeddings and draw rectangles
-for result in results:
-    x, y, width, height = result['box']
-    face = rgb_image[y:y+height, x:x+width]
-    face_embedding = embedder.embeddings([face])
-    embeddings.append(face_embedding)
-    print("Face Embedding:", face_embedding)
+if uploaded_file is not None:
+    # Display uploaded image
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Draw rectangle around the face
-    rect = plt.Rectangle((x, y), width, height, fill=False, color='red')
-    ax.add_patch(rect)
-
-    # Increment face count
-    face_count += 1
-
-# Display face count
-print(f"Number of faces detected: {face_count}")
-
-plt.axis('off')
-plt.show()
-
-# Calculate pairwise distances between embeddings for recognition accuracy
-if len(embeddings) > 1:
-    for i in range(len(embeddings)):
-        for j in range(i + 1, len(embeddings)):
-            distance = np.linalg.norm(embeddings[i] - embeddings[j])
-            print(f"Distance between face {i+1} and face {j+1}: {distance}")
-
-# Example threshold for recognition (you may need to adjust this based on your use case)
-threshold = 1.0
-for i in range(len(embeddings)):
-    for j in range(i + 1, len(embeddings)):
-        distance = np.linalg.norm(embeddings[i] - embeddings[j])
-        if distance < threshold:
-            print(f"Faces {i+1} and {j+1} are likely the same person (distance: {distance})")
-        else:
-            print(f"Faces {i+1} and {j+1} are likely different people (distance: {distance})")
+    # Process image button
+    if st.button("🚀 Process Image"):
+        process_image(image)
