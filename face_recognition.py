@@ -10,7 +10,7 @@ detector = MTCNN()
 embedder = FaceNet()
 
 # Read the image
-image_path = '/content/1200px-Which_friend_are_you.png'  # Replace with your image path
+image_path = 'IMG/1200px-Which_friend_are_you.png'  # Replace with your image path
 image = cv2.imread(image_path)
 rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
