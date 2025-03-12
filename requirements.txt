@@ -1,7 +1,8 @@
-opencv-python
+streamlit
+pillow
+opencv-python-headless
 mtcnn
 keras-facenet
 matplotlib
 numpy
-streamlit
-pillow
+scipy
