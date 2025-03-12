@@ -2,3 +2,6 @@ opencv-python
 mtcnn
 keras-facenet
 matplotlib
+numpy
+streamlit
+pillow
